@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+
+<div>
+    
+    {% with active='balance_box' %}
+        {% include 'header.html' %}
+    {% endwith %}
+
+    <div class="card" style="width: 50rem;">
+        <div class="card-body">
+
+            <div class="d-flex flex-column m-3">
+                <p class="d-flex justify-content-center">Balance</p>
+                <h1 class="d-flex justify-content-center" style="font-size:64px;">{{ balance.get_value_format() }}</h1>
+            </div>
+
+            <form action="{{ url_for('balance_box') }}" method="POST" class="m-5">
+            
+                <div class="d-flex justify-content-evenly m-5">
+                    <button class="btn btn-primary" style="width: 15rem;" name="action" value="add">Add</button>
+                    <button class="btn btn-primary" style="width: 15rem;" name="action" value="withdraw">Withdraw</button>
+                </div>
+            
+                <div class="form-group m-5">
+                    <label for="value">Nominal</label>
+                    <input type="text" class="form-control" name="value">
+                </div>
+                
+            </form>
+            
+        </div>
+    </div>
+
+</div>
+</div>
+
+{% endblock %}

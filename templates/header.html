@@ -1,0 +1,14 @@
+<h1 class="display-3 text-center m-3">~ Kantin Kejujuran ~</h1>
+
+<ul class="nav nav-pills nav-justified">
+    <li class="nav-item m-3">
+        <a class="nav-link {{ 'active' if active == 'store' else 'text-secondary' }}" aria-current="page" href="{{ url_for('store') }}">
+            <h2>Store</h2>
+        </a>
+    </li>
+    <li class="nav-item m-3">
+        <a class="nav-link {{ 'active' if active == 'balance_box' else 'text-secondary' }}" href="{{ url_for('balance_box') }}">
+            <h2>Balance Box</h2>
+        </a>
+    </li>
+</ul>
