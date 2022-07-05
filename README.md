@@ -5,6 +5,8 @@
 
 Kantin Kejujuran is a web-based application store which students could buy items, add items, add store balance, and withdraw store balance. This application is developed using python Flask.
 
+![image](https://user-images.githubusercontent.com/56458008/177318271-1a4aec4a-4c86-44bf-b9c3-1f2b48b06ddf.png)
+
 ## Usage
 
 In order to run this application, first, this repository need to be cloned. Then, installed all required library on `requirements.txt`. Finally, run `main.py` to serve the application on local host.
