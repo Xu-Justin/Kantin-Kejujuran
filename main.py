@@ -96,6 +96,7 @@ def get_timestamp():
 def static_dir(sort_by, path):
     return send_from_directory(storage.folder, path)
 
+@app.route('/', methods=['GET'])
 @app.route('/store', methods=['GET'])
 def store():
     messages = request.args
@@ -210,5 +211,5 @@ def db_init(force=False):
         db_add_item('Mie Goreng', 'Siapa yang tidak suka mie goreng? super enak! garansi uang kembali.', 25000, os.path.join(storage.folder, 'mie_goreng.jpg'), get_timestamp())
         
 if __name__ == '__main__':
-    db_init(force=True)
-    app.run(config.host, config.port, debug=True)
+    db_init(force=False)
+    app.run(config.host, config.port, debug=False)
