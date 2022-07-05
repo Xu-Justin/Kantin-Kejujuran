@@ -25,9 +25,22 @@
             
                 <div class="form-group m-5">
                     <label for="value">Nominal</label>
-                    <input type="text" class="form-control" name="value">
+                    <input type="text" class="form-control" name="value" value="{{ value }}">
                 </div>
-                
+
+                <div class="mx-5">
+                    {% if value_error %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ value_error }}
+                        </div>
+                    {% endif %}
+                    {% if success %}
+                        <div class="alert alert-success" role="alert">
+                            {{ success }}
+                        </div>
+                    {% endif %}
+                </div>
+
             </form>
             
         </div>

@@ -11,14 +11,31 @@
     <div class="card" style="width: 50rem;">
         <div class="card-body">
 
+            {% if success %}
+                <div class="m-3">
+                    <div class="alert alert-success" role="alert">
+                        {{ success }}
+                    </div>
+                </div>
+            {% endif %}
+
             <div class="d-flex justify-content-end m-3">
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
                         Sort By
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-                        <li><a class="dropdown-item" href="{{ url_for('store_order', order='name') }}">Name</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('store_order', order='timestamp') }}">timestamp</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('store_order', sort_by='name', order_type=order_type) }}">Name</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('store_order', sort_by='timestamp', order_type=order_type) }}">Timestamp</a></li>
+                    </ul>
+                </div>
+                <div class="dropdown ms-3">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+                        Order Type
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+                        <li><a class="dropdown-item" href="{{ url_for('store_order', sort_by=sort_by, order_type='ascending') }}">Ascending</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('store_order', sort_by=sort_by, order_type='descending') }}">Descending</a></li>
                     </ul>
                 </div>
             </div>
@@ -40,7 +57,9 @@
                                     <h3>{{ item.get_price_format() }}</h3>
                                 </div>
                                 <div class="d-flex justify-content-end">
-                                    <form action="{{ url_for('delete_item') }}" method="POST">
+                                    <form action="{{ url_for('buy_item') }}" method="POST">
+                                        <input type="hidden" name="sort_by" value="{{ sort_by }}" />
+                                        <input type="hidden" name="order_type" value="{{ order_type }}" />
                                         <button type="submit" class="btn btn-primary" style="min-width: 8rem;" name="id" value="{{ item.id }}">Buy Item</button>
                                     </form>
                                 </div>

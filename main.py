@@ -1,4 +1,4 @@
-import os
+import os, shutil
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
@@ -42,10 +42,17 @@ class Balance(db.Model):
         
     def get_value_format(self):
         return f'Rp{self.value:,}'
-        
-def db_get_item(order='name'):
-    if order == 'name': return Item.query.order_by(Item.name).all()
-    if order == 'timestamp': return Item.query.order_by(Item.timestamp).all()
+    
+def db_get_item(sort_by, order_type):
+    comp = None
+    
+    if sort_by == 'name': comp = Item.name
+    if sort_by == 'timestamp': comp = Item.timestamp
+    
+    if order_type == 'ascending' : comp = comp
+    if order_type == 'descending': comp = comp.desc()
+    
+    return Item.query.order_by(comp).all()
 
 def db_add_item(name, description, price, image_url, timestamp):
     record = Item(name, description, price, image_url, timestamp)
@@ -85,23 +92,26 @@ def db_first_balance_decrease_value(value):
 def get_timestamp():
     return db.func.current_timestamp()
 
-@app.route('/store', methods=['GET'])
-def store():
-    return redirect(url_for('store_order', order='name'))
-
-@app.route("/store/static/<path:path>")
-def static_dir(path):
+@app.route("/store/<sort_by>/static/<path:path>")
+def static_dir(sort_by, path):
     return send_from_directory(storage.folder, path)
 
-@app.route('/store/<order>', methods=['GET'])
-def store_order(order):
-    items = db_get_item(order)
-    return view.store(items)
+@app.route('/store', methods=['GET'])
+def store():
+    messages = request.args
+    return redirect(url_for('store_order', sort_by='timestamp', order_type='ascending', **messages))
+
+@app.route('/store/<sort_by>/<order_type>', methods=['GET'])
+def store_order(sort_by, order_type):
+    items = db_get_item(sort_by, order_type)
+    messages = request.args
+    return view.store(items, sort_by, order_type, messages)
 
 @app.route('/store/add_item', methods=['GET', 'POST'])
 def add_item():
     if request.method == 'GET':
-        return view.add_item()
+        messages = request.args
+        return view.add_item(messages)
     
     elif request.method == 'POST':
         
@@ -116,23 +126,36 @@ def add_item():
         timestamp = get_timestamp()
         image = request.files.get('image', image)
         image_url = os.path.join(config.storage_folder, storage.get_unique_name(config.storage_folder, suffix=f'-{image.filename}', seed=timestamp))
-        image.save(image_url)
+        messages = dict()
         
-        db_add_item(name, description, int(price), image_url, timestamp)
-        return redirect(url_for('store'))
-
-@app.route('/store/delete_item', methods=['POST'])
-def delete_item():
+        if not price.isdigit():
+            messages['price_error'] = f'Price must be numeric.'
+            return redirect(url_for('add_item', name=name, description=description, price=price, **messages))
+            
+        else:
+            image.save(image_url)
+            db_add_item(name, description, int(price), image_url, timestamp)
+            messages['success'] = f'Added new item {name}.'        
+            return redirect(url_for('store', **messages))
+ 
+@app.route('/store/buy_item', methods=['POST'])
+def buy_item():
     id = request.form.get('id', None)
+    sort_by = request.form.get('sort_by', 'timestamp')
+    order_type = request.form.get('order_type', 'descending')
     
+    item = Item.query.filter(Item.id == id).first()
+    db_first_balance_increase_value(item.price)
     db_delete_item(id)
-    return redirect(url_for('store'))    
+    
+    return redirect(url_for('store_order', sort_by=sort_by, order_type=order_type))    
 
 @app.route('/balance_box', methods=['GET', 'POST'])
 def balance_box():
     if request.method == 'GET':
         balance = db_get_first_balance()
-        return view.balance_box(balance)
+        messages = request.args
+        return view.balance_box(balance, messages)
     
     elif request.method == 'POST':
         
@@ -141,18 +164,51 @@ def balance_box():
         
         value = request.form.get('value', value)
         action = request.form.get('action', action)
+        messages = dict()
         
-        value = int(value)
+        if not value.isdigit():
+            messages['value'] = value
+            messages['value_error'] = f'Nominal must be numeric.'
+        else:
+            value = int(value)
+            
+            if action == 'add':
+                if value > 0:
+                    db_first_balance_increase_value(value)
+                    messages['success'] = f'Successfully to add balance Rp{value:,}'
+                else: messages['value_error'] = f'Nominal must be greater than zero.'
+                
+            elif action == 'withdraw':
+                if value > 0 and value < db_get_first_balance().value:
+                    db_first_balance_decrease_value(value)
+                    messages['success'] = f'Successfully to withdraw balance Rp{value:,}'
+                else: messages['value_error'] = f'Nominal must be greater than zero and less than {db_get_first_balance().value}'
         
-        if action == 'add': db_first_balance_increase_value(value)
-        elif action == 'withdraw': db_first_balance_decrease_value(value)
-        
-        return redirect(url_for('balance_box'))
+        return redirect(url_for('balance_box', **messages))
 
-def db_init():
+def db_init(force=False):
+    if force: os.remove(config.db_name)
+    
     db.create_all()
-    if db_empty_balance(): db_add_balance(0)
-
+    if db_empty_balance():
+        db_add_balance(0)
+        
+        import time
+        shutil.copyfile('./sample_images/tempe.jpg', os.path.join(storage.folder, 'tempe.jpg'))
+        db_add_item('Tempe', 'Rasakan kenikmatan tempe yang tiada duanya. Dibuat dengan kacang kedelai asli dengan teknik fermentasi terbaik.', 7000, os.path.join(storage.folder, 'tempe.jpg'), get_timestamp())
+        time.sleep(1)
+        shutil.copyfile('./sample_images/tahu.jpg', os.path.join(storage.folder, 'tahu.jpg'))
+        db_add_item('Tahu', 'Tahu enak, lembut, dan bergizi. Bagus untuk kesehatan dan cemilan. ENAK!', 6000, os.path.join(storage.folder, 'tahu.jpg'), get_timestamp())
+        time.sleep(1)
+        shutil.copyfile('./sample_images/bakwan.jpg', os.path.join(storage.folder, 'bakwan.jpg'))
+        db_add_item('Bakwan', 'Terbuat dari sayur-sayuran asli, ada wortel, kol, dan lain-lain. Super murah!', 4000, os.path.join(storage.folder, 'bakwan.jpg'), get_timestamp())
+        time.sleep(1)
+        shutil.copyfile('./sample_images/ayam_goreng.jpg', os.path.join(storage.folder, 'ayam_goreng.jpg'))
+        db_add_item('Ayam Goreng', 'Yam! yam! yam!', 50000, os.path.join(storage.folder, 'ayam_goreng.jpg'), get_timestamp())
+        time.sleep(1)
+        shutil.copyfile('./sample_images/mie_goreng.jpg', os.path.join(storage.folder, 'mie_goreng.jpg'))
+        db_add_item('Mie Goreng', 'Siapa yang tidak suka mie goreng? super enak! garansi uang kembali.', 25000, os.path.join(storage.folder, 'mie_goreng.jpg'), get_timestamp())
+        
 if __name__ == '__main__':
-    db_init()
+    db_init(force=True)
     app.run(config.host, config.port, debug=True)
